@@ -1,9 +1,9 @@
 import os
-import faiss
 import openai
 import pickle
+import chromadb
 from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.vectorstores import FAISS
+from langchain.vectorstores import Chroma
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.document_loaders import PyPDFLoader, Docx2txtLoader
 from langchain.llms import OpenAI
@@ -12,8 +12,8 @@ from langchain.llms import OpenAI
 os.environ['OPENAI_API_KEY'] = "your_openai_api_key_here"
 
 # Define paths
-BOOKS_FOLDER = "books/"  # Folder containing multiple book files
-INDEX_PATH = "faiss_index"
+BOOKS_FOLDER = "C:\\Users\\Alex\\Desktop\\Books\\"  # Folder containing multiple book files
+DB_PATH = "chroma_db"
 
 # Step 1: Load book content
 def load_books():
@@ -38,18 +38,14 @@ def create_vector_store():
     documents = splitter.create_documents([text])
     
     embeddings = OpenAIEmbeddings()
-    vector_store = FAISS.from_documents(documents, embeddings)
-    
-    faiss.write_index(vector_store.index, INDEX_PATH)
-    with open("vector_store.pkl", "wb") as f:
-        pickle.dump(vector_store, f)
+    vector_store = Chroma.from_documents(documents, embeddings, persist_directory=DB_PATH)
+    vector_store.persist()
     print("Vector store created successfully!")
 
 # Step 3: Load vector database for querying
 def load_vector_store():
-    with open("vector_store.pkl", "rb") as f:
-        vector_store = pickle.load(f)
-    return vector_store
+    embeddings = OpenAIEmbeddings()
+    return Chroma(persist_directory=DB_PATH, embedding_function=embeddings)
 
 # Step 4: Query the AI
 def query_ai(question: str):
@@ -73,3 +69,4 @@ if __name__ == "__main__":
         user_question = input("Ask a question about the books: ")
         answer = query_ai(user_question)
         print("AI Answer:", answer)
+
