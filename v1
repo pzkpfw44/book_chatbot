@@ -1,0 +1,75 @@
+import os
+import faiss
+import openai
+import pickle
+from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain.vectorstores import FAISS
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.document_loaders import PyPDFLoader, Docx2txtLoader
+from langchain.llms import OpenAI
+
+# Load OpenAI API key (replace with your own key)
+os.environ['OPENAI_API_KEY'] = "your_openai_api_key_here"
+
+# Define paths
+BOOKS_FOLDER = "books/"  # Folder containing multiple book files
+INDEX_PATH = "faiss_index"
+
+# Step 1: Load book content
+def load_books():
+    all_text = ""
+    for filename in os.listdir(BOOKS_FOLDER):
+        file_path = os.path.join(BOOKS_FOLDER, filename)
+        if filename.endswith(".pdf"):
+            loader = PyPDFLoader(file_path)
+        elif filename.endswith(".docx"):
+            loader = Docx2txtLoader(file_path)
+        else:
+            continue  # Skip unsupported files
+        
+        documents = loader.load()
+        all_text += "\n".join([doc.page_content for doc in documents]) + "\n"
+    return all_text
+
+# Step 2: Process text and create vector database
+def create_vector_store():
+    text = load_books()
+    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+    documents = splitter.create_documents([text])
+    
+    embeddings = OpenAIEmbeddings()
+    vector_store = FAISS.from_documents(documents, embeddings)
+    
+    faiss.write_index(vector_store.index, INDEX_PATH)
+    with open("vector_store.pkl", "wb") as f:
+        pickle.dump(vector_store, f)
+    print("Vector store created successfully!")
+
+# Step 3: Load vector database for querying
+def load_vector_store():
+    with open("vector_store.pkl", "rb") as f:
+        vector_store = pickle.load(f)
+    return vector_store
+
+# Step 4: Query the AI
+def query_ai(question: str):
+    vector_store = load_vector_store()
+    docs = vector_store.similarity_search(question, k=3)
+    context = "\n".join([doc.page_content for doc in docs])
+    
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are an AI assistant trained to answer questions based on the user's books."},
+            {"role": "user", "content": f"Answer the following question based on these book excerpts:\n{context}\n\nQuestion: {question}"}
+        ]
+    )
+    return response["choices"][0]["message"]["content"]
+
+# Example usage
+if __name__ == "__main__":
+    create_vector_store()  # Run once to build the index
+    while True:
+        user_question = input("Ask a question about the books: ")
+        answer = query_ai(user_question)
+        print("AI Answer:", answer)
