@@ -2,8 +2,8 @@ import os
 import openai
 import pickle
 import chromadb
-from langchain_community.embeddings import OpenAIEmbeddings
-from langchain_community.vectorstores import Chroma
+from langchain_openai import OpenAIEmbeddings
+from langchain_chroma import Chroma
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader
 from langchain_community.llms import OpenAI
@@ -12,7 +12,7 @@ from langchain_community.llms import OpenAI
 os.environ['OPENAI_API_KEY'] = "your_openai_api_key_here"
 
 # Define paths
-BOOKS_FOLDER = "C:\\Users\\Alex\\Desktop\\Books\\"  # Folder containing multiple book files
+BOOKS_FOLDER = r"C:\Users\Alex\Desktop\Books"  # Folder containing multiple book files
 DB_PATH = "chroma_db"
 
 # Step 1: Load book content
@@ -37,9 +37,10 @@ def create_vector_store():
     splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
     documents = splitter.create_documents([text])
     
-    embeddings = OpenAIEmbeddings()
+    embeddings = OpenAIEmbeddings(openai_api_key=os.environ['OPENAI_API_KEY'])
     vector_store = Chroma.from_documents(documents, embeddings, persist_directory=DB_PATH)
-    vector_store.persist()
+    # Chroma no longer requires manual persistence as it automatically saves data
+    print("Vector store created successfully!")
     print("Vector store created successfully!")
 
 # Step 3: Load vector database for querying
@@ -53,14 +54,20 @@ def query_ai(question: str):
     docs = vector_store.similarity_search(question, k=3)
     context = "\n".join([doc.page_content for doc in docs])
     
-    response = openai.ChatCompletion.create(
+    
+    client = openai.Client(api_key=os.environ['OPENAI_API_KEY'])
+    response = client.chat.completions.create(
         model="gpt-4",
         messages=[
             {"role": "system", "content": "You are an AI assistant trained to answer questions based on the user's books."},
-            {"role": "user", "content": f"Answer the following question based on these book excerpts:\n{context}\n\nQuestion: {question}"}
-        ]
+            {"role": "user", "content": f"""Answer the following question based on these book excerpts:
+{context}
+
+Question: {question}"""}
+        ],
+        temperature=0.7  # Ensure compatibility with OpenAI's latest API
     )
-    return response["choices"][0]["message"]["content"]
+    return response.choices[0].message.content
 
 # Example usage
 if __name__ == "__main__":
