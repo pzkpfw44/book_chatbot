@@ -9,7 +9,7 @@ from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader
 from langchain_community.llms import OpenAI
 
 # Load OpenAI API key (replace with your own key)
-os.environ['OPENAI_API_KEY'] = "your_openai_api_key_here"
+os.environ['OPENAI_API_KEY'] = "your_openai_api_key_here" #Here add your API Key
 
 # Define paths
 BOOKS_FOLDER = r"C:\Users\Alex\Desktop\Books"  # Folder containing multiple book files
