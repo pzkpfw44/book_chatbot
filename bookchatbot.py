@@ -8,7 +8,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader
 from langchain_community.llms import OpenAI
 
-# Load OpenAI API key (replace with your own key)
+# Load OpenAI API key (replace with your own key below, subscription might be reqiured)
 os.environ['OPENAI_API_KEY'] = "your_openai_api_key_here" #Here add your API Key
 
 # Define paths
