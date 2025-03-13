@@ -14,7 +14,7 @@ Interactive CLI-based chatbot
 
 Installation
 
-1️⃣ Install Dependencies
+1️⃣ Install Dependencies 
 
 pip install openai langchain faiss-cpu pypdf python-docx
 
